@@ -43,7 +43,7 @@ fi
 
 cd $RUN_DIR
 
-echo "Setting up test case by linking data files into this directory"
+echo "Setting up test case by linking data files into the run directory"
 
 echo "linking to LANDUSE.TBL in $WRF_ROOT/run directory"
 
