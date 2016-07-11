@@ -1,0 +1,78 @@
+#!/bin/tcsh
+#PBS -Pw85
+#PBS -l walltime=12:00:00
+#PBS -l mem=512GB
+#PBS -l ncpus=64
+#PBS -j oe
+#PBS -q normal
+#PBS -l wd
+#PBS -m abe
+#PBS -M craig.arthur@ga.gov.au
+
+module purge
+module load openmpi/1.8.8
+module load netcdf/4.3.3.1
+
+
+# Base directory for the WRF install:
+WRF_ROOT=/short/$PROJECT/$USER/WRFV3/WRFV_3.7.1/
+
+# Case: "test/em_<test_case>" or "test/em_real"
+CASE=test/em_tropical_cyclone
+
+# Namelist for the simulation:
+NAMELIST=$HOME/namelists/namelist.input.d03hwrf
+
+# Check the executable exists before trying to run it
+if [ ! -f "$WRF_ROOT/$CASE/wrf.exe" ]; then
+    echo "wrf.exe doesnt exist for $CASE"
+    echo "You need to compile the test case first"
+    # Kill the job, reporting command not found 
+    exit 127
+fi
+
+# Simulation: one of the test cases available in the WRF code, or "em_real"
+SIMULATION=tc_demo
+
+# Where the simulation output will be stored:
+RUNDIR=/short/$PROJECT/$USER/$SIMULATION
+
+if [ ! -d "$RUNDIR" ]; then
+    mkdir "$RUNDIR"
+fi
+
+cd $RUN_DIR
+
+echo "Setting up test case by linking data files into this directory"
+
+echo "linking to LANDUSE.TBL in $WRF_ROOT/run directory"
+
+ln -sf $WRF_ROOT/run/LANDUSE.TBL .
+ln -sf $WRF_ROOT/run/RRTM_DATA .
+
+echo "linking to ozone tables in $WRF_ROOT/run directory"
+
+ln -sf $WRF_ROOT/run/ozone.formatted .
+ln -sf $WRF_ROOT/run/ozone_lat.formatted .
+ln -sf $WRF_ROOT/run/ozone_plev.formatted .
+
+echo "linking RRTM tables in $WRF_ROOT/run directory"
+
+ln -sf $WRF_ROOT/run/RRTMG_LW_DATA .
+ln -sf $WRF_ROOT/run/RRTMG_SW_DATA .
+ln -sf $WRF_ROOT/run/RRTMG_LW_DATA_DBL .
+ln -sf $WRF_ROOT/run/RRTMG_SW_DATA_DBL .
+
+echo "linking soil tables in $WRF_ROOT/run directory"
+
+ln -sf $WRF_ROOT/run/SOILPARM.TBL .
+ln -sf $WRF_ROOT/run/VEGPARM.TBL .
+ln -sf $WRF_ROOT/run/GENPARM.TBL .
+
+echo "linking namelist file"
+ln -sf $NAMELIST .
+
+limit stacksize unlimited
+
+echo running with $PBS_NCPUS mpi ranks
+time mpirun -np $PBS_NCPUS -report-bindings ./wrf.exe
