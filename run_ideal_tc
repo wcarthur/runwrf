@@ -12,18 +12,20 @@ module purge
 module load openmpi/1.8.8
 module load netcdf/4.3.3.1
 
+umask 002
 
 # Base directory for the WRF install:
-WRF_ROOT=/short/$PROJECT/$USER/WRFV3/WRFV_3.7.1/
+WRF_ROOT=/short/$PROJECT/$USER/WRFV_3.7.1/WRFV3/
 
 # Case: "test/em_<test_case>" or "test/em_real"
 CASE=test/em_tropical_cyclone
 
 # Namelist for the simulation:
 NAMELIST=$HOME/namelists/namelist.input.d03hwrf
+SOUNDING=$HOME/namelists/input_sounding 
 
 if [ ! -f "$WRF_ROOT/$CASE/ideal.exe" ]; then
-    echo "ideal.exe doesnt exist for $CASE"
+    echo "$WRF_ROOT/$CASE/ideal.exe doesnt exist for $CASE"
     echo "You need to compile the test case first"
     # Kill the job, reporting command not found 
     exit 127
@@ -39,7 +41,7 @@ if [ ! -d "$RUNDIR" ]; then
     mkdir "$RUNDIR"
 fi
 
-cd $RUN_DIR
+cd $RUNDIR
 
 echo "Setting up test case by linking data files into this directory"
 
@@ -68,9 +70,10 @@ ln -sf $WRF_ROOT/run/VEGPARM.TBL .
 ln -sf $WRF_ROOT/run/GENPARM.TBL .
 
 echo "linking namelist file"
-ln -sf $NAMELIST .
+ln -sf $NAMELIST ./namelist.input
+ln -sf $SOUNDING ./input_sounding
 
-limit stacksize unlimited
+ulimit -s unlimited
 
 echo running with $PBS_NCPUS mpi ranks
 time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/$CASE/ideal.exe
