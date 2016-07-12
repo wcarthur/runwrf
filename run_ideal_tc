@@ -80,7 +80,7 @@ time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/$CASE/ideal.exe
 OUT=$?
 
 if [ $OUT -ne 0 ]; then
-    echo "Execution of ideal.exe exited with non-zero status"
+    echo "Execution of ideal.exe exited with non-zero status ($OUT)"
     echo "Check rsl.out and rsl.error in $RUNDIR"
 fi
 
