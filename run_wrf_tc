@@ -78,3 +78,9 @@ ulimit -s unlimited
 
 echo running with $PBS_NCPUS mpi ranks
 time mpirun -np $PBS_NCPUS -report-bindings ./wrf.exe
+OUT=$?
+if [ $OUT -ne 0 ]; then
+   echo "Execution returned non-zero exit status"
+   echo "Check rsl.out and rsl.error files in $RUNDIR"
+fi
+
