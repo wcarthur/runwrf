@@ -11,7 +11,7 @@ I try to include some useful commentary, plus catch the exit code from scripts t
 
 Shell:
 ------
-The job scripts are generally csh (or tcsh) scripts.
+The job scripts are generally bash scripts.
 
 Listing:
 --------
