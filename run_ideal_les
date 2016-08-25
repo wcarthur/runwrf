@@ -1,0 +1,62 @@
+#!/bin/bash
+#PBS -Pw85
+#PBS -l walltime=1:00:00
+#PBS -l mem=8GB
+#PBS -l ncpus=1
+#PBS -j oe
+#PBS -q normal
+#PBS -l wd
+#PBS -m abe
+#PBS -M craig.arthur@ga.gov.au
+
+module purge
+module load openmpi/1.8.8
+module load netcdf/4.3.3.1
+
+
+# Base directory for the WRF install:
+WRF_ROOT=/short/$PROJECT/$USER/WRFV_3.7.1/WRFV3
+
+# Case: "test/em_<test_case>" or "test/em_real"
+CASE=test/em_les
+
+# Namelist for the simulation:
+NAMELIST=$HOME/namelists/namelist.input.emles
+SOUNDING=$HOME/namelists/input_sounding.emles.u10
+
+# Check the executable exists before trying to run it
+if [ ! -f "$WRF_ROOT/$CASE/ideal.exe" ]; then
+    echo "ideal.exe doesnt exist for $CASE"
+    echo "You need to compile the test case first"
+    # Kill the job, reporting command not found 
+    exit 127
+fi
+
+# Simulation: one of the test cases available in the WRF code, or "em_real"
+SIMULATION=emles.u10
+
+# Where the simulation output will be stored:
+RUNDIR=/short/$PROJECT/$USER/$SIMULATION
+
+if [ ! -d "$RUNDIR" ]; then
+    mkdir "$RUNDIR"
+fi
+
+cd $RUNDIR
+
+echo "Setting up test case by linking data files into the run directory"
+
+echo "linking namelist file"
+ln -sf $NAMELIST ./namelist.input
+ln -sf $SOUNDING ./input_sounding
+
+ulimit -s unlimited
+
+time $WRF_ROOT/$CASE/ideal.exe
+
+OUT=$?
+if [ $OUT -ne 0 ]; then
+   echo "Execution returned non-zero exit status ($OUT)"
+   echo "Check rsl.out and rsl.error files in $RUNDIR"
+fi
+
