@@ -70,6 +70,10 @@
 !	g95 iowrf.f -L/usr/local/netcdf/lib -lnetcdf -lm  \
 !	-I/usr/local/netcdf/include -ffree-form -o iowrf
 !
+!  linux flags, with Intel compiiler
+!       ifort -L/usr/local/netcdf/lib -lnetcdf -lnetcdff \
+!       -I/usr/local/netcdf/include -FR iowrf.f -o iowrf
+!
 !============================================================================
 
       implicit none
