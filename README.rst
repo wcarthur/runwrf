@@ -1,9 +1,10 @@
 RUNWRF 
 ======
+
 Job scripts for running WRF and pre/post-processors on NCI Facility
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-This branch holds the job scripts used to execute WRF and the pre-processing and post-processing stuff on the NCI Facility.
+This repository holds the job scripts used to execute WRF and the pre-processing and post-processing stuff on the NCI Facility.
 
 They are by and large PBS job scripts, which may call additional bash, Python, GrADS, etc. scripts to do the work. I use these to link in additional files required at run time (e.g. lookup tables, namelists, other input stuff). I also generally try to avoid running the model code in the directory where the code lives - I prefer to keep the model output separate from the code base. 
 

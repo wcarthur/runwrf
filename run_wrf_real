@@ -9,12 +9,15 @@
 #PBS -M craig.arthur@ga.gov.au
 
 module purge
-module load openmpi/1.6.3
-module load netcdf/4.3.3.1
+module load pbs
+module load dot
 
 
 # Base directory for the WRF install:
-WRF_ROOT=/short/$PROJECT/$USER/WRFV_3.7.1/WRFV3
+WRF_ROOT=/scratch/$PROJECT/$USER/WRF/WRF
+
+# Make use of the build environment used for compiling WRF
+source $WRF_ROOT/../build.env
 
 # Case: "test/em_<test_case>" or "test/em_real"
 CASE=test/em_real
@@ -35,7 +38,7 @@ fi
 SIMULATION=emreal
 
 # Where the simulation output will be stored:
-RUNDIR=/short/$PROJECT/$USER/$SIMULATION
+RUNDIR=/scratch/$PROJECT/$USER/$SIMULATION
 
 if [ ! -d "$RUNDIR" ]; then
     mkdir "$RUNDIR"
