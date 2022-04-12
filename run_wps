@@ -1,0 +1,117 @@
+#PBS -l walltime=03:00:00
+#PBS -l mem=64GB
+#PBS -l ncpus=8
+#PBS -q express
+#PBS -l wd
+#PBS -j oe
+#PBS -l software=intel-compiler
+#PBS -W umask=0022
+#PBS -l storage=gdata/w85+gdata/hh5+gdata/rt52+gdata/zz93+gdata/sx70+scratch/w85
+#PBS -l jobfs=8GB
+
+module load pbs
+module load dot
+
+DATE=`date +%Y%m%d%H%M`
+
+# Default values for command line options
+SIMULATION=seroja
+geogrid=1
+ungrib=1
+metgrid=1
+help_text=0
+
+SHORT=hs:gum
+LONG=simulation:,help,geogrid,ungrib,metgrid
+
+PARSED=$(getopt --options $SHORT --longoptions $LONG --name "$0" -- "$@")
+if [[ $? != 0 ]] ; then echo "Wrong arguments. Terminating..." >&2 ; exit 1 ; fi
+
+eval set -- "$PARSED"
+
+while true; do
+    case "$1" in
+    -s|--simulation) SIMULATION="$2"; shift 2 ;;
+    -g|--geogrid) geogrid=1; shift ;;
+    -u|--ungrib) ungrib=1; shift ;;
+    -m|--metgrid) metgrid=1; shift ;;
+    -h|--help) help_text=1; shift ;;
+    --) shift; break ;;
+    *) echo "Programming error"; exit 1 ;;
+    esac
+done
+
+
+if [[ ${help_text} == 1 ]]; then
+    echo "The optional arguments are:"
+
+    # Architecture
+    echo "-s, --simulation  followed by a string (default 'seroja'). "
+    echo "    Specify a name for the simulation"
+
+    echo "-g, --geogrid - run geogrid.exe"
+    echo "-u, --ungrib - run ungrib.exe (using era5grib first)"
+    echo "-m, --metgrid - run metgrid to generate IC/LBC data"
+
+    # Help
+    echo "-h, --help  writes this help text"
+    exit 0
+fi
+
+# Base directory for the WRF install:
+WRF_ROOT=/scratch/$PROJECT/$USER/WRF/
+
+NAMELISTPATH=$HOME/namelists
+
+# Where the simulation output will be stored:
+RUNDIR=/scratch/$PROJECT/$USER/$SIMULATION
+
+if [ ! -d "$RUNDIR" ]; then
+    mkdir -p "$RUNDIR"
+fi
+
+cd $RUNDIR
+
+# Make use of the build environment used for compiling WRF
+source $WRF_ROOT/build.env
+
+# Link the namelist.wps file:
+# Note, that using sed later on in this script will remove the link and replace 
+# it with a local file. Move any existing namelist file to a backup first (only
+# if it's actually a file. If it's a symlink, we replace it)
+
+if [ -f namelist.wps  && ! -h namelist.wps ]; then
+    mv namelist.wps namelist.wps.backup.$DATE
+fi
+
+ln -sf $NAMELISTPATH/$SIMULATION/namelist.wps namelist.wps
+
+# Run geogrid:
+if [[ $geogrid == 1 ]]; then
+    ln -sf $WRF_ROOT/WPS/geogrid/GEOGRID.TBL.ARW $WRF_ROOT/WPS/geogrid/GEOGRID.TBL
+    $WRF_ROOT/WPS/geogrid.exe > geogrid.$SIMULATION.$DATE.log
+fi
+
+
+if [[ $ungrib == 1 ]]; then
+    # Extract ERA5 data to grib format:
+    module use /g/data3/hh5/public/modules
+    module load conda/analysis3
+
+    $HOME/.local/bin/era5grib wrf --namelist namelist.wps --geo geo_em.d01.nc --output GRIBFILE.AAA > era5grib.log 2>&1
+
+    # Run ungrib:
+    ln -sf $WRF_ROOT/WPS/ungrib/Variable_Tables/Vtable.ERA-interim.pl Vtable
+    $WRF_ROOT/WPS/ungrib.exe > ungrib.$SIMULATION.$DATE.log
+fi
+
+if [[ $metgrid == 1 ]]; then
+    # Run metgrid:
+    ln -sf $WRF_ROOT/WPS/metgrid/METGRID.TBL.ERAI $WRF_ROOT/WPS/metgrid/METGRID.TBL
+    $WRF_ROOT/WPS/metgrid.exe > metgrid.$SIMULATION.$DATE.log
+    OUT=$?
+    if [$OUT -ne 0 ]; then
+        echo "Execution returned non-zero exit status ($OUT)"
+        echo "Check metgrid.$SIMULATION.$DATE.log file in $RUNDIR"
+    fi
+fi
