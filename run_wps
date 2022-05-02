@@ -43,6 +43,9 @@ done
 
 
 if [[ ${help_text} == 1 ]]; then
+    echo "run_wps - run WRF Pre-processing System"
+    echo "Assumes WRF has been compiled in /scratch/$PROJECT/$USER/WRF"
+    echo "and namelist files are in $HOME/namelists/<SIMULATION>"
     echo "The optional arguments are:"
 
     # Architecture

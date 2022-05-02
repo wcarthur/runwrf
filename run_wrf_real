@@ -1,12 +1,16 @@
 #!/bin/bash
 #PBS -Pw85
-#PBS -l walltime=2:00:00
-#PBS -l mem=128GB
-#PBS -l ncpus=32
+#PBS -l walltime=12:00:00
+#PBS -l mem=512GB
+#PBS -l ncpus=512
 #PBS -j oe
 #PBS -q normal
 #PBS -m abe
 #PBS -M craig.arthur@ga.gov.au
+#PBS -l software=intel-compiler
+#PBS -W umask=0022
+#PBS -l storage=gdata/w85+gdata/hh5+gdata/rt52+gdata/zz93+gdata/sx70+scratch/w85
+#PBS -l jobfs=8GB
 
 module purge
 module load pbs
@@ -14,20 +18,20 @@ module load dot
 
 
 # Base directory for the WRF install:
-WRF_ROOT=/scratch/$PROJECT/$USER/WRF/WRF
+WRF_ROOT=/scratch/$PROJECT/$USER/WRF
 
 # Make use of the build environment used for compiling WRF
-source $WRF_ROOT/../build.env
+source $WRF_ROOT/build.env
 
 # Case: "test/em_<test_case>" or "test/em_real"
 CASE=test/em_real
 
 # Namelist for the simulation:
-NAMELIST=$HOME/namelists/namelist_Alby.input
+NAMELIST=$HOME/namelists/seroja/namelist.input
 SOUNDING=$HOME/namelists/input_sounding
 
 # Check the executable exists before trying to run it
-if [ ! -f "$WRF_ROOT/$CASE/wrf.exe" ]; then
+if [ ! -f "$WRF_ROOT/WRF/$CASE/wrf.exe" ]; then
     echo "wrf.exe doesnt exist for $CASE"
     echo "You need to compile the test case first"
     # Kill the job, reporting command not found 
@@ -35,7 +39,7 @@ if [ ! -f "$WRF_ROOT/$CASE/wrf.exe" ]; then
 fi
 
 # Simulation: one of the test cases available in the WRF code, or "em_real"
-SIMULATION=emreal
+SIMULATION=seroja
 
 # Where the simulation output will be stored:
 RUNDIR=/scratch/$PROJECT/$USER/$SIMULATION
@@ -50,27 +54,27 @@ echo "Setting up test case by linking data files into the run directory"
 
 echo "linking to LANDUSE.TBL in $WRF_ROOT/run directory"
 
-ln -sf $WRF_ROOT/run/LANDUSE.TBL .
-ln -sf $WRF_ROOT/run/RRTM_DATA .
+ln -sf $WRF_ROOT/WRF/run/LANDUSE.TBL .
+ln -sf $WRF_ROOT/WRF/run/RRTM_DATA .
 
 echo "linking to ozone tables in $WRF_ROOT/run directory"
 
-ln -sf $WRF_ROOT/run/ozone.formatted .
-ln -sf $WRF_ROOT/run/ozone_lat.formatted .
-ln -sf $WRF_ROOT/run/ozone_plev.formatted .
+ln -sf $WRF_ROOT/WRF/run/ozone.formatted .
+ln -sf $WRF_ROOT/WRF/run/ozone_lat.formatted .
+ln -sf $WRF_ROOT/WRF/run/ozone_plev.formatted .
 
 echo "linking RRTM tables in $WRF_ROOT/run directory"
 
-ln -sf $WRF_ROOT/run/RRTMG_LW_DATA .
-ln -sf $WRF_ROOT/run/RRTMG_SW_DATA .
-ln -sf $WRF_ROOT/run/RRTMG_LW_DATA_DBL .
-ln -sf $WRF_ROOT/run/RRTMG_SW_DATA_DBL .
+ln -sf $WRF_ROOT/WRF/run/RRTMG_LW_DATA .
+ln -sf $WRF_ROOT/WRF/run/RRTMG_SW_DATA .
+ln -sf $WRF_ROOT/WRF/run/RRTMG_LW_DATA_DBL .
+ln -sf $WRF_ROOT/WRF/run/RRTMG_SW_DATA_DBL .
 
-echo "linking soil tables in $WRF_ROOT/run directory"
+echo "linking soil tables in $WRF_ROOT/WRF/run directory"
 
-ln -sf $WRF_ROOT/run/SOILPARM.TBL .
-ln -sf $WRF_ROOT/run/VEGPARM.TBL .
-ln -sf $WRF_ROOT/run/GENPARM.TBL .
+ln -sf $WRF_ROOT/WRF/run/SOILPARM.TBL .
+ln -sf $WRF_ROOT/WRF/run/VEGPARM.TBL .
+ln -sf $WRF_ROOT/WRF/run/GENPARM.TBL .
 
 echo "linking namelist file"
 ln -sf $NAMELIST ./namelist.input
@@ -79,7 +83,7 @@ ln -sf $SOUNDING ./input_sounding
 ulimit -s unlimited
 
 echo running with $PBS_NCPUS mpi ranks
-time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/$CASE/wrf.exe
+time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/WRF/$CASE/wrf.exe
 
 OUT=$?
 if [ $OUT -ne 0 ]; then
