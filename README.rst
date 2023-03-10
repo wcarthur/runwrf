@@ -12,9 +12,13 @@ I try to include some useful commentary, plus catch the exit code from scripts t
 
 Shell:
 ------
-The job scripts are generally bash scripts.
+The job scripts are generally bash scripts. 
 
 Listing:
 --------
 
+run_tc_setup.csh: link required files for the idealised TC example
 run_ideal_tc, run_wrf_tc: run the idealised TC example (test/em_tropical_cyclone)
+run_ideal_les, run_wrf_les: run an idealised large-eddy simulation example (test/em_les)
+run_wps: Run WPS and prepare required input data for a real simulation
+run_wrf_real: linke required files and execute wrf.exe for a real simulation (need to run `run_wps` first)

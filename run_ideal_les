@@ -1,42 +1,44 @@
 #!/bin/bash
 #PBS -Pw85
 #PBS -l walltime=1:00:00
-#PBS -l mem=8GB
+#PBS -l mem=128GB
 #PBS -l ncpus=1
 #PBS -j oe
+#PBS -o /home/547/cxa547/logs/wrf
 #PBS -q normal
 #PBS -l wd
 #PBS -m abe
 #PBS -M craig.arthur@ga.gov.au
+#PBS -v CASE
+#PBS -l storage=gdata/w85+scratch/w85
 
 module purge
-module load openmpi/1.8.8
-module load netcdf/4.3.3.1
+source /g/data/w85/software/WRF/build.env
 
 
 # Base directory for the WRF install:
-WRF_ROOT=/short/$PROJECT/$USER/WRFV_3.7.1/WRFV3
-
-# Case: "test/em_<test_case>" or "test/em_real"
-CASE=test/em_les
+WRF_ROOT=/g/data/$PROJECT/software/WRF/WRF
 
 # Namelist for the simulation:
-NAMELIST=$HOME/namelists/namelist.input.emles
-SOUNDING=$HOME/namelists/input_sounding.emles.u10
+NAMELIST=$HOME/namelists/lestest/namelist.input.$CASE
+SOUNDING=$HOME/namelists/lestest/input_sounding.$CASE
+
+# sed command to automagically update the grid size in the namelist:
+# sed -i "/^\s\(e_we\|e_sn\)/s/[0-9]\{2,\}/$NX/" $NAMELIST
 
 # Check the executable exists before trying to run it
-if [ ! -f "$WRF_ROOT/$CASE/ideal.exe" ]; then
-    echo "ideal.exe doesnt exist for $CASE"
+if [ ! -f "$WRF_ROOT/test/em_les/ideal.exe" ]; then
+    echo "ideal.exe doesnt exist for em_les"
     echo "You need to compile the test case first"
-    # Kill the job, reporting command not found 
+    # Kill the job, reporting command not found
     exit 127
 fi
 
 # Simulation: one of the test cases available in the WRF code, or "em_real"
-SIMULATION=emles.u10
+SIMULATION=em_les
 
 # Where the simulation output will be stored:
-RUNDIR=/short/$PROJECT/$USER/$SIMULATION
+RUNDIR=/scratch/$PROJECT/$USER/WRF/$CASE
 
 if [ ! -d "$RUNDIR" ]; then
     mkdir "$RUNDIR"
@@ -52,7 +54,7 @@ ln -sf $SOUNDING ./input_sounding
 
 ulimit -s unlimited
 
-time $WRF_ROOT/$CASE/ideal.exe
+time $WRF_ROOT/test/$SIMULATION/ideal.exe
 
 OUT=$?
 if [ $OUT -ne 0 ]; then

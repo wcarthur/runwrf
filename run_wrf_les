@@ -1,62 +1,72 @@
 #!/bin/bash
 #PBS -Pw85
-#PBS -l walltime=1:00:00
+#PBS -l walltime=48:00:00
 #PBS -l mem=128GB
-#PBS -l ncpus=64
+#PBS -l ncpus=12
 #PBS -j oe
+#PBS -o /home/547/cxa547/logs/wrf
 #PBS -q normal
 #PBS -l wd
 #PBS -m abe
 #PBS -M craig.arthur@ga.gov.au
+#PBS -v CASE
+#PBS -l storage=gdata/w85+scratch/w85
 
 module purge
-module load openmpi/1.8.8
-module load netcdf/4.3.3.1
+source /g/data/w85/software/WRF/build.env
 
 
 # Base directory for the WRF install:
-WRF_ROOT=/short/$PROJECT/$USER/WRFV_3.7.1/WRFV3
-
-# Case: "test/em_<test_case>" or "test/em_real"
-CASE=test/em_les
+WRF_ROOT=/g/data/$PROJECT/software/WRF/WRF
 
 # Namelist for the simulation:
-NAMELIST=$HOME/namelists/namelist.input.emles
-SOUNDING=$HOME/namelists/input_sounding.emles.u10
+NAMELIST=$HOME/namelists/lestest/namelist.input.$CASE
+SOUNDING=$HOME/namelists/lestest/input_sounding.$CASE
+
+# sed command to automagically update the grid size in the namelist:
+# sed -i "/^\s\(e_we\|e_sn\)/s/[0-9]\{2,\}/$NX/" $NAMELIST
 
 # Check the executable exists before trying to run it
-if [ ! -f "$WRF_ROOT/$CASE/wrf.exe" ]; then
-    echo "wrf.exe doesnt exist for $CASE"
+if [ ! -f "$WRF_ROOT/test/em_les/wrf.exe" ]; then
+    echo "wrf.exe doesnt exist for em_les"
     echo "You need to compile the test case first"
-    # Kill the job, reporting command not found 
+    # Kill the job, reporting command not found
     exit 127
 fi
 
 # Simulation: one of the test cases available in the WRF code, or "em_real"
-SIMULATION=emles.u10
+SIMULATION=em_les
 
 # Where the simulation output will be stored:
-RUNDIR=/short/$PROJECT/$USER/$SIMULATION
-
-if [ ! -d "$RUNDIR" ]; then
-    mkdir "$RUNDIR"
-fi
+RUNDIR=/scratch/$PROJECT/$USER/WRF/$CASE
 
 cd $RUNDIR
 
+echo $CASE
 echo "Setting up test case by linking data files into the run directory"
 
-echo "linking namelist file"
-ln -sf $NAMELIST ./namelist.input
-ln -sf $SOUNDING ./input_sounding
+#echo "linking namelist file"
+#ln -sf $NAMELIST ./namelist.input
+#ln -sf $SOUNDING ./input_sounding
+
+# Check the wrf input file exists before trying to run
+if [ ! -f "$RUNDIR/wrfinput_d01" ]; then
+    echo "wrfinput_d01 doesnt exist for $CASE"
+    echo "You need to run ideal.exe first"
+    # Kill the job, reporting command not found
+    exit 2
+fi
 
 ulimit -s unlimited
 
 echo running with $PBS_NCPUS mpi ranks
-time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/$CASE/wrf.exe
+time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/test/$SIMULATION/wrf.exe > $RUNDIR/wrf.$CASE.$PBS_NCPUS.log
 OUT=$?
 if [ $OUT -ne 0 ]; then
    echo "Execution returned non-zero exit status ($OUT)"
    echo "Check rsl.out and rsl.error files in $RUNDIR"
+else
+    echo "Successfully ompleted wrf.exe for $CASE"
+    echo "Check log file at $RUNDIR/wrf.$CASE.$PBS_NCPUS.log"
 fi
 
