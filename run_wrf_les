@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -Pw85
-#PBS -l walltime=48:00:00
+#PBS -l walltime=12:00:00
 #PBS -l mem=128GB
 #PBS -l ncpus=12
 #PBS -j oe
@@ -59,14 +59,20 @@ fi
 
 ulimit -s unlimited
 
-echo running with $PBS_NCPUS mpi ranks
-time mpirun -np $PBS_NCPUS -report-bindings $WRF_ROOT/test/$SIMULATION/wrf.exe > $RUNDIR/wrf.$CASE.$PBS_NCPUS.log
+
+export OMP_NUM_THREADS=2
+export OMP_PROC_BIND=true
+NCORE=$(($PBS_NCPUS/$OMP_NUM_THREADS))
+echo "Running $CASE with $PBS_NCPUS mpi ranks and $OMP_NUM_THREADS OpenMPI threads"
+
+time mpirun -np $NCORE --map-by node:PE=$OMP_NUM_THREADS --rank-by core -report-bindings $WRF_ROOT/test/$SIMULATION/wrf.exe > $RUNDIR/wrf.$CASE.$PBS_NCPUS.log
+
 OUT=$?
 if [ $OUT -ne 0 ]; then
    echo "Execution returned non-zero exit status ($OUT)"
    echo "Check rsl.out and rsl.error files in $RUNDIR"
 else
-    echo "Successfully ompleted wrf.exe for $CASE"
+    echo "Successfully completed wrf.exe for $CASE"
     echo "Check log file at $RUNDIR/wrf.$CASE.$PBS_NCPUS.log"
 fi
 
